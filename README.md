@@ -40,12 +40,15 @@ These reactions are relevant to stellar nucleosynthesis, in particular to the CN
 ## Experimental Setup
 
 - **Accelerator:** LUNA 400 kV electrostatic accelerator
-- **Beam:** Proton beam at energies ~300–400 keV (lab frame)
-- **Targets:** ¹⁹F implanted into metallic backings (Fe, Ta) and fluoride compounds (CaF₂, LiF, SUDF)
+- **Beam:** Proton beam at energies ~100–400 keV (lab frame)
+- **Targets:**
+  - ¹⁹F implanted into metallic backings (Fe, Ta)
+  - ¹⁹F compounds (CaF₂, LiF)
+  - ¹⁹F fluorinated on metallic backings (Ta)
 - **Detectors:**
+  - BGO (Bismuth Germanate) — high-efficiency summing detector in coincidence mode (6 crystals)
   - HPGe (High-Purity Germanium) — high-resolution gamma spectroscopy
-  - BGO (Bismuth Germanate) — high-efficiency summing detector in coincidence mode
-- **Coincidence window:** 100–1000 ns (BGO–HPGe)
+- **Coincidence window:** 100–1000 ns
 - **Operating temperature:** ~80 °C (relevant for Doppler broadening corrections)
 
 ---
