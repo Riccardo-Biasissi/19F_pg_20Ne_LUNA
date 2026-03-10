@@ -78,8 +78,8 @@ The ¹⁹F implantation depth profile in each target is determined by fitting th
 
 | Script | Purpose |
 |---|---|
-| `profile_fit_240.py` | Profile fit at 240° detector angle |
-| `profile_fit_340.py` | Profile fit at 340° detector angle |
+| `profile_fit_240.py` | Profile fit at 240 keV target scans |
+| `profile_fit_340.py` | Profile fit at 340 keV target scans |
 | `SRIM.py` | SRIM output parser (dE/dx, range, straggling) |
 | `pyazr/` | Azure2 R-matrix code interface |
 
