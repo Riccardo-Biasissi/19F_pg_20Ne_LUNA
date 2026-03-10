@@ -1,0 +1,4 @@
+{
+    "cmake.ignoreCMakeListsMissing": true,
+    "python.analysis.autoImportCompletions": true
+}
