@@ -20,6 +20,9 @@ from SRIM import SRIM
 from scipy.special import erf
 from scipy.stats import skewnorm
 
+import emcee   # pip install emcee
+import corner  # pip install corner
+
 # Targets list
 targets = ['IMP_LFE#1', 'IMP_LFE#2', 'IMP_LFE#3', 'IMP_LTA#1', 'IMP_LTA#2', 'SUDF#2', 'SUDF#3', 'SUDF#4']
 backings = ['Fe', 'Fe', 'Fe', 'Ta', 'Ta', 'Ta', 'Ta', 'Ta']
@@ -30,9 +33,18 @@ backings = ['Fe', 'Fe', 'Fe', 'Ta', 'Ta', 'Fe', 'Ta']
 target_types = ['implanted'] * 7
 
 # Test for imp_lfe low 1 only
-targets = ['SUDF#4']
+targets = ['IMP_LTA#2']
 backings = ['Ta']
-target_types = ['fluorinated']
+target_types = ['implanted']
+
+# MCMC settings — set RUN_MCMC=True to run posterior sampling after the LM fit
+# (slower, but gives corner plots and asymmetric credible intervals)
+RUN_MCMC      = True  # toggle
+MCMC_NWALKERS = 16     # must be >= 2 * n_free_params
+MCMC_BURN     = 100    # burn-in steps to discard
+MCMC_STEPS    = 300    # production steps
+MCMC_THIN     = 5      # keep every N-th sample
+ENERGY_TAG    = "240"  # used in output filenames
 
 # Usefull constants
 k = 8.617e-5            # Boltzmann constant in eV/K
@@ -84,7 +96,6 @@ def gaussian( x, x0, s ):
     return np.exp( -(x - x0)**2 / ( s*s*2 ) )
 
 _skg_cache = {}
-_arctan_norm_cache = {}
 
 def skewed_gaussian(x, x0, s, alpha):
     if s <= 0:
@@ -184,10 +195,13 @@ def model( x, theta, target_type, backing ):
     return sign + back
 
 # Define the chi2 function
+_silent = False   # set True during MCMC to suppress per-call progress print
+
 def chi2( params, x, y, y_err, eff, target_type, backing ):
     mod   = model( x, params, target_type, backing ) / q_e / 1e6 * eff
     res   = ( y - mod ) / y_err
-    print( "Chi2: {:10.4f}".format(np.sum(res**2)), end="\r" )
+    if not _silent:
+        print( "Chi2: {:10.4f}".format(np.sum(res**2)), end="\r" )
     return res
 
 # Resolve results dir relative to this script so it works from any parent folder
@@ -218,11 +232,18 @@ for target_idx, target in enumerate(targets):
         params.add( "strag",     value=1,    vary=False, min=0.9,  max=1.1   )
         params.add( "n_backing", value=2.5,  vary=True,  min=0.0,  max=7.0   )
         params.add( "n_f",       value=1.0,  vary=False )
-        params.add( "width1", value=8.0, vary=True, min=1.0, max=80.0 )
-        params.add( "width2", value=10.0, vary=True, min=1.0, max=80.0 )
-        params.add( "width3", value=20.0, vary=True, min=1.0, max=80.0 )
-        params.add( "norm1", value=0.3, vary=True, min=0.0, max=1.0 )
-        params.add( "norm2", value=0.1, vary=True, min=0.0, max=1.0 )
+        # --- 3-layer erf params (commented out) ---
+        # params.add( "width1",    value=8.0,  vary=True,  min=1.0, max=80.0 )
+        # params.add( "width2",    value=10.0, vary=True,  min=1.0, max=80.0 )
+        # params.add( "width3",    value=20.0, vary=True,  min=1.0, max=80.0 )
+        # params.add( "norm1",     value=0.3,  vary=True,  min=0.0, max=1.0  )
+        # params.add( "norm2",     value=0.1,  vary=True,  min=0.0, max=1.0  )
+        # Arctan profile params
+        params.add( "k0",        value=3,       vary=False,  min=0.0,  max=10.0  )
+        params.add( "k1",        value=5,       vary=False,  min=0.0,  max=10.0  )
+        params.add( "s0",        value=5.0,     vary=False,  min=0.01, max=100.0 )
+        params.add( "s1",        value=0.2,     vary=True,  min=0.01, max=1.0 )
+        params.add( "deltaE",    value=10.0,    vary=True,  min=1.0,  max=120.0 )
 
     csv_path = f"Yield_scans/Results/Yield_{target}.csv"
 
@@ -287,7 +308,41 @@ for target_idx, target in enumerate(targets):
                 stderr = p.stderr if p.stderr is not None else float('nan')
                 print(f"  {name}: {p.value:.6g} +/- {stderr:.6g} (vary={p.vary})")
             print(f"  → redchi2 = {redchi:.4f}, f_bias = {f_bias:.4f} (converged in {it+1} iteration(s))")
-            
+
+            # --- Optional MCMC posterior sampling for corner plots + asymmetric errors ---
+            if RUN_MCMC:
+                _silent = True
+                free_params = [n for n, p in out.params.items() if p.vary]
+                nwalkers = max(MCMC_NWALKERS, 2 * len(free_params) + 2)
+                try:
+                    out_mcmc = minimize(
+                        chi2, out.params, method='emcee',
+                        args=(x, y, y_err_fit, eff, target_type, backing_type),
+                        nan_policy='omit',
+                        burn=MCMC_BURN, steps=MCMC_STEPS, thin=MCMC_THIN,
+                        nwalkers=nwalkers, is_weighted=True, progress=True,
+                    )
+                    _silent = False
+                    flat = out_mcmc.flatchain[free_params].to_numpy()
+                    print(f"\nMCMC credible intervals ({target} {scan_label}):")
+                    for i, name in enumerate(free_params):
+                        q16, q50, q84 = np.percentile(flat[:, i], [16, 50, 84])
+                        print(f"  {name}: {q50:.4g}  +{q84-q50:.4g} / -{q50-q16:.4g}")
+                    truths = [out.params[n].value for n in free_params]
+                    fig_c = corner.corner(flat, labels=free_params,
+                                          quantiles=[0.16, 0.5, 0.84],
+                                          show_titles=True, title_fmt='.3g',
+                                          truths=truths)
+                    cname = "".join(c if (c.isalnum() or c in ('_','-')) else '_'
+                                    for c in f"{target}_{scan_label}_{ENERGY_TAG}_corner")
+                    fig_c.savefig(os.path.join(results_dir, f"{cname}.png"),
+                                  dpi=150, bbox_inches='tight')
+                    plt.close(fig_c)
+                    print(f"Corner plot saved: {cname}.png")
+                except Exception as e_mcmc:
+                    _silent = False
+                    print(f"MCMC failed for {target} {scan_label}: {e_mcmc}")
+
             # Collect parameters for implanted targets
             if target_type == 'implanted':
                 # extract values and their stderr (errors) when available
