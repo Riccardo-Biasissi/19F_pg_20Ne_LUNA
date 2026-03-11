@@ -1,3 +1,37 @@
-# Python bytecode
-__pycache__/
-*.py[cod]
+# Ignora tutto dentro Data/
+Data/*
+
+# Cartelle completamente incluse
+!Data/STOPPING/
+!Data/SIMULATIONS/
+
+!Data/PROCESSED/
+Data/PROCESSED/*
+!Data/PROCESSED/run823.root
+!Data/PROCESSED/run1412.root
+!Data/PROCESSED/run2535.root
+!Data/PROCESSED/run2809.root
+!Data/PROCESSED/run3022.root
+!Data/CURRENT/
+Data/CURRENT/*
+!Data/CURRENT/run823.txt
+!Data/CURRENT/run1412.txt
+!Data/CURRENT/run2535.txt
+!Data/CURRENT/run2809.txt
+!Data/CURRENT/run3022.txt
+!Data/ROOT/
+Data/ROOT/*
+!Data/ROOT/run823.root
+!Data/ROOT/run1412.root
+!Data/ROOT/run2535.root
+!Data/ROOT/run2809.root
+!Data/ROOT/run3022.root
+ignorer.py
+git_push.sh
+git_pull.sh
+deadtime_tester.ipynb
+19F+p_400kV_old.xlsx
+Codes/
+sync.py
+Tests/
+.gitignore

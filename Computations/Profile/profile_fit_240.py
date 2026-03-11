@@ -39,7 +39,7 @@ target_types = ['fluorinated']
 
 # MCMC settings — set RUN_MCMC=True to run posterior sampling after the LM fit
 # (slower, but gives corner plots and asymmetric credible intervals)
-RUN_MCMC      = False  # toggle
+RUN_MCMC      = True  # toggle
 MCMC_NWALKERS = 16     # must be >= 2 * n_free_params
 MCMC_BURN     = 100    # burn-in steps to discard
 MCMC_STEPS    = 300    # production steps
