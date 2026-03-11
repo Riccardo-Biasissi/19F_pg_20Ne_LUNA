@@ -114,32 +114,16 @@ def profile( de, theta, target_type ):
             # return gaussian( de, theta["mean"]+theta["dead_layer"], theta["std"] )
     elif target_type == 'fluorinated':
         # --- 3-layer erf-smoothed profile (commented out) ---
-        # edge = 0.5  # keV smoothing scale at each boundary
-        # sq2 = np.sqrt(2)
-        # w1 = theta["width1"]
-        # w2 = theta["width1"] + theta["width2"]
-        # w3 = theta["width1"] + theta["width2"] + theta["width3"]
-        # s0 = 0.5 * (1 + erf( de          / (sq2 * edge)))  # rises at de=0
-        # s1 = 0.5 * (1 + erf((de - w1)    / (sq2 * edge)))  # rises at de=width1
-        # s2 = 0.5 * (1 + erf((de - w2)    / (sq2 * edge)))  # rises at de=width1+width2
-        # s3 = 0.5 * (1 + erf((de - w3)    / (sq2 * edge)))  # rises at de=width1+width2+width3
-        # return (s0 - s1) + theta["norm1"] * (s1 - s2) + theta["norm2"] * (s2 - s3)
-
-        # Arctan profile: sharp rise at surface, smooth/tunable falling edge
-        # f(de) = k0*arctan(s0*de) - k1*arctan(s1*(de - deltaE))
-        # k0,k1: amplitude of each arctan term (set ~2/pi so each term saturates at ~1)
-        # s0: steepness of the rising edge at de=0 (large -> sharp onset)
-        # s1: steepness of the falling edge at de=deltaE (small -> gradual tail)
-        # deltaE: depth (keV energy loss) where the falling edge is centred
-        k0  = float(theta["k0"]);   k1 = float(theta["k1"])
-        s0  = float(theta["s0"]);   s1 = float(theta["s1"])
-        dE  = float(theta["deltaE"])
-        key = (k0, k1, s0, s1, dE)
-        if key not in _arctan_norm_cache:
-            g    = np.linspace(0, max(3 * dE, 100), 3000)
-            peak = np.max(k0 * np.arctan(s0 * g) - k1 * np.arctan(s1 * (g - dE)))
-            _arctan_norm_cache[key] = 1.0 / peak if peak > 0 else 1.0
-        return ( k0 * np.arctan(s0 * de) - k1 * np.arctan(s1 * (de - dE)) ) * _arctan_norm_cache[key]
+        edge = 0.5  # keV smoothing scale at each boundary
+        sq2 = np.sqrt(2)
+        w1 = theta["width1"]
+        w2 = theta["width1"] + theta["width2"]
+        w3 = theta["width1"] + theta["width2"] + theta["width3"]
+        s0 = 0.5 * (1 + erf( de          / (sq2 * edge)))  # rises at de=0
+        s1 = 0.5 * (1 + erf((de - w1)    / (sq2 * edge)))  # rises at de=width1
+        s2 = 0.5 * (1 + erf((de - w2)    / (sq2 * edge)))  # rises at de=width1+width2
+        s3 = 0.5 * (1 + erf((de - w3)    / (sq2 * edge)))  # rises at de=width1+width2+width3
+        return (s0 - s1) + theta["norm1"] * (s1 - s2) + theta["norm2"] * (s2 - s3)
     elif target_type == 'evaporated':
         # Pure single step
         if de <= 0 or de >= theta["width"]:
@@ -245,17 +229,11 @@ for target_idx, target in enumerate(targets):
         params.add( "n_backing", value=3.0,  vary=True,  min=0.0,  max=10.0  )
         params.add( "n_f",       value=1.0,  vary=False )
         # --- 3-layer erf params (commented out) ---
-        # params.add( "width1",    value=8.0,  vary=True,  min=1.0, max=80.0 )
-        # params.add( "width2",    value=10.0, vary=True,  min=1.0, max=80.0 )
-        # params.add( "width3",    value=20.0, vary=True,  min=1.0, max=80.0 )
-        # params.add( "norm1",     value=0.3,  vary=True,  min=0.0, max=1.0  )
-        # params.add( "norm2",     value=0.1,  vary=True,  min=0.0, max=1.0  )
-        # Arctan profile params
-        params.add( "k0",        value=2/np.pi, vary=True,  min=0.0,  max=10.0  )
-        params.add( "k1",        value=2/np.pi, vary=True,  min=0.0,  max=10.0  )
-        params.add( "s0",        value=5.0,     vary=True,  min=0.01, max=100.0 )
-        params.add( "s1",        value=0.2,     vary=True,  min=0.01, max=100.0 )
-        params.add( "deltaE",    value=30.0,    vary=True,  min=1.0,  max=200.0 )
+        params.add( "width1",    value=8.0,  vary=True,  min=1.0, max=25.0 )
+        params.add( "width2",    value=10.0, vary=True,  min=0.0, max=35.0 )
+        params.add( "width3",    value=20.0, vary=True,  min=0.0, max=40.0 )
+        params.add( "norm1",     value=0.3,  vary=True,  min=0.0, max=1.0  )
+        params.add( "norm2",     value=0.1,  vary=True,  min=0.0, max=1.0  )
     elif target_type == "evaporated":
         params = Parameters()
         params.add( "beam",  value=0.12, vary=False )

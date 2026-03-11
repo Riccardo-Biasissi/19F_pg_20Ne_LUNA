@@ -241,11 +241,11 @@ for target_idx, target in enumerate(targets):
         # params.add( "norm1",     value=0.3,  vary=True,  min=0.0, max=1.0  )
         # params.add( "norm2",     value=0.1,  vary=True,  min=0.0, max=1.0  )
         # Arctan profile params
-        params.add( "k0",        value=2/np.pi, vary=True,  min=0.0,  max=10.0  )
-        params.add( "k1",        value=2/np.pi, vary=True,  min=0.0,  max=10.0  )
-        params.add( "s0",        value=5.0,     vary=True,  min=0.01, max=100.0 )
-        params.add( "s1",        value=0.2,     vary=True,  min=0.01, max=100.0 )
-        params.add( "deltaE",    value=30.0,    vary=True,  min=1.0,  max=200.0 )
+        params.add( "k0",        value=3,       vary=False,  min=0.0,  max=10.0  )
+        params.add( "k1",        value=5,       vary=False,  min=0.0,  max=10.0  )
+        params.add( "s0",        value=5.0,     vary=False,  min=0.01, max=100.0 )
+        params.add( "s1",        value=0.2,     vary=True,  min=0.01, max=1.0 )
+        params.add( "deltaE",    value=10.0,    vary=True,  min=1.0,  max=120.0 )
 
     csv_path = f"Yield_scans/Results/Yield_{target}.csv"
 
