@@ -33,9 +33,9 @@ backings = ['Fe', 'Fe', 'Fe', 'Ta', 'Ta', 'Fe', 'Ta']
 target_types = ['implanted'] * 7
 
 # Test for imp_lfe low 1 only
-targets = ['SUDF#4']
+targets = ['IMP_LTA#2']
 backings = ['Ta']
-target_types = ['fluorinated']
+target_types = ['implanted']
 
 # MCMC settings — set RUN_MCMC=True to run posterior sampling after the LM fit
 # (slower, but gives corner plots and asymmetric credible intervals)
@@ -122,7 +122,7 @@ def profile( de, theta, target_type ):
         else:
             return skewed_gaussian( de, theta["mean"], theta["std"], theta["alpha"] )
     elif target_type == 'fluorinated':
-        edge = 0.5  # keV smoothing scale at each boundary
+        edge = 0.05  # keV smoothing scale at each boundary
         sq2 = np.sqrt(2)
         w1 = theta["width1"]
         w2 = theta["width1"] + theta["width2"]
