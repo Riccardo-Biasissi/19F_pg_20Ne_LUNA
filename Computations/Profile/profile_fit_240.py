@@ -111,7 +111,7 @@ def profile( de, theta, target_type ):
             return skewed_gaussian( de, theta["mean"], theta["std"], theta["alpha"] )
     elif target_type == 'fluorinated':
         # 3-layer erf-smoothed profile (mirrors profile_fit_340.py)
-        edge = 0.5  # keV smoothing scale at each boundary
+        edge = 0.05  # keV smoothing scale at each boundary
         sq2 = np.sqrt(2)
         w1 = theta["width1"]
         w2 = theta["width1"] + theta["width2"]
@@ -217,11 +217,11 @@ for target_idx, target in enumerate(targets):
         params.add( "strag",     value=1,    vary=False, min=0.9, max=1.1 )
         params.add( "n_backing", value=2.5,  vary=True,  min=0.0, max=7.0 )
         params.add( "n_f",       value=1.0,  vary=False )
-        params.add( "width1",    value=10.0,  vary=True,  min=1.0, max=80.0 )
-        params.add( "width2",    value=0.0, vary=False,  min=1.0, max=80.0 )
-        params.add( "width3",    value=0.0, vary=False,  min=1.0, max=80.0 )
-        params.add( "norm1",     value=0.0,  vary=False,  min=0.0, max=1.0 )
-        params.add( "norm2",     value=0.0,  vary=False,  min=0.0, max=1.0 )
+        params.add( "width1", value=8.0, vary=True, min=1.0, max=80.0 )
+        params.add( "width2", value=10.0, vary=True, min=1.0, max=80.0 )
+        params.add( "width3", value=20.0, vary=True, min=1.0, max=80.0 )
+        params.add( "norm1", value=0.3, vary=True, min=0.0, max=1.0 )
+        params.add( "norm2", value=0.1, vary=True, min=0.0, max=1.0 )
 
     csv_path = f"Yield_scans/Results/Yield_{target}.csv"
 
