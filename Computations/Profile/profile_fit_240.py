@@ -84,6 +84,7 @@ def gaussian( x, x0, s ):
     return np.exp( -(x - x0)**2 / ( s*s*2 ) )
 
 _skg_cache = {}
+_arctan_norm_cache = {}
 
 def skewed_gaussian(x, x0, s, alpha):
     if s <= 0:
@@ -128,8 +129,15 @@ def profile( de, theta, target_type ):
         # s0: steepness of the rising edge at de=0 (large -> sharp onset)
         # s1: steepness of the falling edge at de=deltaE (small -> gradual tail)
         # deltaE: depth (keV energy loss) where the falling edge is centred
-        return ( theta["k0"] * np.arctan( theta["s0"] *  de )
-               - theta["k1"] * np.arctan( theta["s1"] * (de - theta["deltaE"]) ) )
+        k0  = float(theta["k0"]);   k1 = float(theta["k1"])
+        s0  = float(theta["s0"]);   s1 = float(theta["s1"])
+        dE  = float(theta["deltaE"])
+        key = (k0, k1, s0, s1, dE)
+        if key not in _arctan_norm_cache:
+            g    = np.linspace(0, max(3 * dE, 100), 3000)
+            peak = np.max(k0 * np.arctan(s0 * g) - k1 * np.arctan(s1 * (g - dE)))
+            _arctan_norm_cache[key] = 1.0 / peak if peak > 0 else 1.0
+        return ( k0 * np.arctan(s0 * de) - k1 * np.arctan(s1 * (de - dE)) ) * _arctan_norm_cache[key]
     elif target_type == 'implanted' and 'Low' in target:
         # Gaussian
         if de <= 0:
