@@ -110,8 +110,12 @@ def profile( de, theta, target_type ):
         else:
             return skewed_gaussian( de, theta["mean"], theta["std"], theta["alpha"] )
     elif target_type == 'fluorinated':
-        # Square
-        return 1 if de > 0 and de < theta["width"] else 0
+        # Smooth step edges with erf so width has non-zero gradient for the optimizer
+        edge = 0.5  # keV smoothing scale at each boundary
+        sq2 = np.sqrt(2)
+        s0 = 0.5 * (1 + erf( de                    / (sq2 * edge)))  # rises at de=0
+        s1 = 0.5 * (1 + erf((de - theta["width"])  / (sq2 * edge)))  # falls at de=width
+        return s0 - s1
     elif target_type == 'implanted' and 'Low' in target:
         # Gaussian
         if de <= 0:
