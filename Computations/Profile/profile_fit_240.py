@@ -189,6 +189,10 @@ def chi2( params, x, y, y_err, eff, target_type, backing ):
     print( "Chi2: {:10.4f}".format(np.sum(res**2)), end="\r" )
     return res
 
+# Resolve results dir relative to this script so it works from any parent folder
+results_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
+os.makedirs(results_dir, exist_ok=True)
+
 # Loop over targets and scans, perform fits for scans with E<300 keV
 # Collect fit results here
 fit_results = []
@@ -352,7 +356,7 @@ for target_idx, target in enumerate(targets):
                 ax2.set_xlim(200, 260)
                 ax2.set_ylim(0, 2)
                 safe_name = "".join(c if (c.isalnum() or c in ('_','-')) else '_' for c in f"{target}_{scan_label}_240")
-                outpath = f"/data0/biasissi/LUNA/19F+p_g+20Ne/Computations/Profile/results/{safe_name}.png"
+                outpath = os.path.join(results_dir, f"{safe_name}.png")
                 fig.savefig(outpath, dpi=300, bbox_inches='tight')
                 plt.close(fig)
                 print(f"Saved plot: {outpath}")
@@ -361,13 +365,9 @@ for target_idx, target in enumerate(targets):
         except Exception as e:
             print(f"Fit failed for {target} {scan_label}: {e}")
 # After processing all targets/scans, save collected fit parameters
-results_dir = "/data0/biasissi/LUNA/19F+p_g+20Ne/Computations/Profile/results"
-import os
-os.makedirs(results_dir, exist_ok=True)
-
 if len(fit_results) > 0:
     results_df = pd.DataFrame(fit_results)
-    results_df.to_csv("/data0/biasissi/LUNA/19F+p_g+20Ne/Computations/Profile/results/fit_params_240.csv", index=False)
+    results_df.to_csv(os.path.join(results_dir, "fit_params_240.csv"), index=False)
     print("Fit results saved to fit_params_240.csv")
 else:
     print("No fit results were collected; nothing to save.")
