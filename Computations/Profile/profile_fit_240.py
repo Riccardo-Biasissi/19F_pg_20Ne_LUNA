@@ -29,10 +29,10 @@ targets = ['IMP_LFE#1', 'IMP_LFE#2', 'IMP_LFE#3', 'IMP_LTA#1', 'IMP_LTA#2', 'IMP
 backings = ['Fe', 'Fe', 'Fe', 'Ta', 'Ta', 'Fe', 'Ta']
 target_types = ['implanted'] * 7
 
-# Test tfor imp_lfe low 1 only
-targets = ['LiF']
-backings = ['Li']
-target_types = ['implanted']
+# Test for imp_lfe low 1 only
+targets = ['SUDF#4']
+backings = ['Ta']
+target_types = ['fluorinated']
 
 # Usefull constants
 k = 8.617e-5            # Boltzmann constant in eV/K
@@ -110,8 +110,17 @@ def profile( de, theta, target_type ):
         else:
             return skewed_gaussian( de, theta["mean"], theta["std"], theta["alpha"] )
     elif target_type == 'fluorinated':
-        # Square
-        return 1 if de > 0 and de < theta["width"] else 0
+        # 3-layer erf-smoothed profile (mirrors profile_fit_340.py)
+        edge = 0.5  # keV smoothing scale at each boundary
+        sq2 = np.sqrt(2)
+        w1 = theta["width1"]
+        w2 = theta["width1"] + theta["width2"]
+        w3 = theta["width1"] + theta["width2"] + theta["width3"]
+        s0 = 0.5 * (1 + erf( de          / (sq2 * edge)))  # rises at de=0
+        s1 = 0.5 * (1 + erf((de - w1)    / (sq2 * edge)))  # falls at de=width1
+        s2 = 0.5 * (1 + erf((de - w2)    / (sq2 * edge)))  # falls at de=width1+width2
+        s3 = 0.5 * (1 + erf((de - w3)    / (sq2 * edge)))  # falls at de=total width
+        return (s0 - s1) + theta["norm1"] * (s1 - s2) + theta["norm2"] * (s2 - s3)
     elif target_type == 'implanted' and 'Low' in target:
         # Gaussian
         if de <= 0:
@@ -180,6 +189,10 @@ def chi2( params, x, y, y_err, eff, target_type, backing ):
     print( "Chi2: {:10.4f}".format(np.sum(res**2)), end="\r" )
     return res
 
+# Resolve results dir relative to this script so it works from any parent folder
+results_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
+os.makedirs(results_dir, exist_ok=True)
+
 # Loop over targets and scans, perform fits for scans with E<300 keV
 # Collect fit results here
 fit_results = []
@@ -198,13 +211,17 @@ for target_idx, target in enumerate(targets):
         params.add( "mean",  value=2.0, vary=True, min=0.0, max=10.0 )
         params.add( "std",   value=7.0, vary=True, min=0.0, max=15.0  )
         params.add( "alpha", value=5.0, vary=False, min=0.0, max=7.5 )
-    else:
+    elif target_type == "fluorinated":
         params = Parameters()
-        params.add( "beam",  value=0.12, vary=False )
-        params.add( "strag", value=1, vary=False, min=0.9, max=1.1  )
-        params.add( "n_backing",  value=2.5, vary=True, min=0.0, max=7.0 )
-        params.add( "n_f",   value=1.0, vary=False )
-        params.add( "width", value=15.0, vary=True, min=0.0, max=100.0 )
+        params.add( "beam",      value=0.12, vary=False )
+        params.add( "strag",     value=1,    vary=False, min=0.9, max=1.1 )
+        params.add( "n_backing", value=2.5,  vary=True,  min=0.0, max=7.0 )
+        params.add( "n_f",       value=1.0,  vary=False )
+        params.add( "width1",    value=10.0,  vary=True,  min=1.0, max=80.0 )
+        params.add( "width2",    value=0.0, vary=False,  min=1.0, max=80.0 )
+        params.add( "width3",    value=0.0, vary=False,  min=1.0, max=80.0 )
+        params.add( "norm1",     value=0.0,  vary=False,  min=0.0, max=1.0 )
+        params.add( "norm2",     value=0.0,  vary=False,  min=0.0, max=1.0 )
 
     csv_path = f"Yield_scans/Results/Yield_{target}.csv"
 
@@ -339,7 +356,7 @@ for target_idx, target in enumerate(targets):
                 ax2.set_xlim(200, 260)
                 ax2.set_ylim(0, 2)
                 safe_name = "".join(c if (c.isalnum() or c in ('_','-')) else '_' for c in f"{target}_{scan_label}_240")
-                outpath = f"/data0/biasissi/LUNA/19F+p_g+20Ne/Computations/Profile/results/{safe_name}.png"
+                outpath = os.path.join(results_dir, f"{safe_name}.png")
                 fig.savefig(outpath, dpi=300, bbox_inches='tight')
                 plt.close(fig)
                 print(f"Saved plot: {outpath}")
@@ -348,13 +365,9 @@ for target_idx, target in enumerate(targets):
         except Exception as e:
             print(f"Fit failed for {target} {scan_label}: {e}")
 # After processing all targets/scans, save collected fit parameters
-results_dir = "/data0/biasissi/LUNA/19F+p_g+20Ne/Computations/Profile/results"
-import os
-os.makedirs(results_dir, exist_ok=True)
-
 if len(fit_results) > 0:
     results_df = pd.DataFrame(fit_results)
-    results_df.to_csv("/data0/biasissi/LUNA/19F+p_g+20Ne/Computations/Profile/results/fit_params_240.csv", index=False)
+    results_df.to_csv(os.path.join(results_dir, "fit_params_240.csv"), index=False)
     print("Fit results saved to fit_params_240.csv")
 else:
     print("No fit results were collected; nothing to save.")

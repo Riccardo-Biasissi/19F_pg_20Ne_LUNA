@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 plt.rcParams.update({'font.size': 14})
+import os
+import re
 
 from scipy import integrate
 from lmfit import Parameters, minimize
@@ -27,10 +29,10 @@ targets = ['IMP_LFE#1', 'IMP_LFE#2', 'IMP_LFE#3', 'IMP_LTA#1', 'IMP_LTA#2', 'IMP
 backings = ['Fe', 'Fe', 'Fe', 'Ta', 'Ta', 'Fe', 'Ta']
 target_types = ['implanted'] * 7
 
-# Test tfor imp_lfe low 1 only
-targets = ['LiF']
-backings = ['Li']
-target_types = ['implanted']
+# Test for imp_lfe low 1 only
+targets = ['SUDF#4']
+backings = ['Ta']
+target_types = ['fluorinated']
 
 # Usefull constants
 k = 8.617e-5            # Boltzmann constant in eV/K
@@ -110,15 +112,18 @@ def profile( de, theta, target_type ):
             return skewed_gaussian( de, theta["mean"], theta["std"], theta["alpha"] )
             # return gaussian( de, theta["mean"]+theta["dead_layer"], theta["std"] )
     elif target_type == 'fluorinated':
-        if de > 0 and de < theta["width1"]:
-            return 1 #- ( de / theta["width"] )*0.4
-        elif de > theta["width1"] and de < theta["width2"] + theta["width1"]:
-            return theta["norm1"]
-        elif de > theta["width2"] + theta["width1"] and de < theta["width2"] + theta["width1"] + theta["width3"]:
-            # return 0.09
-            return theta["norm2"] #2.5/de
-        else:
-            return 0
+        # Smooth step edges with erf so width parameters have non-zero gradients
+        # for the Levenberg-Marquardt Jacobian (hard steps give zero gradient -> widths stuck)
+        edge = 0.05  # keV smoothing scale at each boundary
+        sq2 = np.sqrt(2)
+        w1 = theta["width1"]
+        w2 = theta["width1"] + theta["width2"]
+        w3 = theta["width1"] + theta["width2"] + theta["width3"]
+        s0 = 0.5 * (1 + erf( de          / (sq2 * edge)))  # rises at de=0
+        s1 = 0.5 * (1 + erf((de - w1)    / (sq2 * edge)))  # rises at de=width1
+        s2 = 0.5 * (1 + erf((de - w2)    / (sq2 * edge)))  # rises at de=width1+width2
+        s3 = 0.5 * (1 + erf((de - w3)    / (sq2 * edge)))  # rises at de=width1+width2+width3
+        return (s0 - s1) + theta["norm1"] * (s1 - s2) + theta["norm2"] * (s2 - s3)
     elif target_type == 'evaporated':
         # Pure single step
         if de <= 0 or de >= theta["width"]:
@@ -195,6 +200,10 @@ def chi2( params, x, y, y_err, eff, target_type, backing ):
     print( "Chi2: {:10.4f}".format(np.sum(res**2)), end="\r" )
     return res
 
+# Resolve results dir relative to this script so it works from any parent folder
+results_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
+os.makedirs(results_dir, exist_ok=True)
+
 # Loop over targets and scans, perform fits for scans with E<300 keV
 # Collect fit results here
 fit_results = []
@@ -219,9 +228,9 @@ for target_idx, target in enumerate(targets):
         params.add( "strag", value=1, vary=False, min=0.9, max=1.1  )
         params.add( "n_backing",  value=3.0, vary=True, min=0.0, max=10.0 )
         params.add( "n_f",   value=1.0, vary=False )
-        params.add( "width1", value=7.5, vary=False, min=8.0, max=80.0 )
-        params.add( "width2", value=10.0, vary=False )
-        params.add( "width3", value=20.0, vary=False )
+        params.add( "width1", value=8.0, vary=True, min=1.0, max=80.0 )
+        params.add( "width2", value=10.0, vary=True, min=1.0, max=80.0 )
+        params.add( "width3", value=20.0, vary=True, min=1.0, max=80.0 )
         params.add( "norm1", value=0.3, vary=True, min=0.0, max=1.0 )
         params.add( "norm2", value=0.1, vary=True, min=0.0, max=1.0 )
     elif target_type == "evaporated":
@@ -366,7 +375,7 @@ for target_idx, target in enumerate(targets):
                 ax2.set_xlim(310, 360)
                 ax2.set_ylim(0, 2)
                 safe_name = "".join(c if (c.isalnum() or c in ('_','-')) else '_' for c in f"{target}_{scan_label}_340")
-                outpath = f"/data0/biasissi/LUNA/19F+p_g+20Ne/Computations/Profile/results/{safe_name}.png"
+                outpath = os.path.join(results_dir, f"{safe_name}.png")
                 fig.savefig(outpath, dpi=300, bbox_inches='tight')
                 plt.close(fig)
                 print(f"Saved plot: {outpath}")
@@ -375,13 +384,9 @@ for target_idx, target in enumerate(targets):
         except Exception as e:
             print(f"Fit failed for {target} {scan_label}: {e}")
 # After processing all targets/scans, save collected fit parameters
-results_dir = "/data0/biasissi/LUNA/19F+p_g+20Ne/Computations/Profile/results"
-import os
-os.makedirs(results_dir, exist_ok=True)
-
 if len(fit_results) > 0:
     results_df = pd.DataFrame(fit_results)
-    results_df.to_csv("/data0/biasissi/LUNA/19F+p_g+20Ne/Computations/Profile/results/fit_params_340.csv", index=False)
+    results_df.to_csv(os.path.join(results_dir, "fit_params_340.csv"), index=False)
     print("Fit results saved to fit_params_340.csv")
 else:
     print("No fit results were collected; nothing to save.")
