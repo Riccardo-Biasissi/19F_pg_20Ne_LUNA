@@ -114,7 +114,7 @@ def profile( de, theta, target_type ):
             # return gaussian( de, theta["mean"]+theta["dead_layer"], theta["std"] )
     elif target_type == 'fluorinated':
         # --- 3-layer erf-smoothed profile (commented out) ---
-        edge = 0.5  # keV smoothing scale at each boundary
+        edge = 0.05  # keV smoothing scale at each boundary
         sq2 = np.sqrt(2)
         w1 = theta["width1"]
         w2 = theta["width1"] + theta["width2"]
