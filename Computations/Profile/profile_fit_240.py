@@ -84,6 +84,7 @@ def gaussian( x, x0, s ):
     return np.exp( -(x - x0)**2 / ( s*s*2 ) )
 
 _skg_cache = {}
+_arctan_norm_cache = {}
 
 def skewed_gaussian(x, x0, s, alpha):
     if s <= 0:
@@ -214,8 +215,8 @@ for target_idx, target in enumerate(targets):
     elif target_type == "fluorinated":
         params = Parameters()
         params.add( "beam",      value=0.12, vary=False )
-        params.add( "strag",     value=1,    vary=False, min=0.9, max=1.1 )
-        params.add( "n_backing", value=2.5,  vary=True,  min=0.0, max=7.0 )
+        params.add( "strag",     value=1,    vary=False, min=0.9,  max=1.1   )
+        params.add( "n_backing", value=2.5,  vary=True,  min=0.0,  max=7.0   )
         params.add( "n_f",       value=1.0,  vary=False )
         params.add( "width1", value=8.0, vary=True, min=1.0, max=80.0 )
         params.add( "width2", value=10.0, vary=True, min=1.0, max=80.0 )
@@ -265,17 +266,27 @@ for target_idx, target in enumerate(targets):
         y = y[sorted_indices]
         y_err = y_err[sorted_indices]
 
-        # Apply bias to errors to make fit converge better (less importance to rising-edge and tail)
-        mask = (x > 240)
-        bias = np.mean(y[mask]) * 0.35
-        y_err += bias
+        # Iteratively find f_bias so that reduced chi2 = 1 after the fit
+        y_err_orig = y_err.copy()
+        bias_mask  = (x > 240)
 
         try:
-            out = minimize( chi2, params, args=(x, y, y_err, eff, target_type, backing_type), max_nfev=5000 )
+            f_bias   = 0.35
+            tol      = 0.02
+            max_iter = 10
+            for it in range(max_iter):
+                bias      = np.mean(y[bias_mask]) * f_bias
+                y_err_fit = y_err_orig + bias
+                out = minimize( chi2, params, args=(x, y, y_err_fit, eff, target_type, backing_type), max_nfev=5000 )
+                redchi = out.redchi if (out.nfree > 0 and np.isfinite(out.redchi)) else float('nan')
+                if np.isnan(redchi) or abs(redchi - 1.0) < tol:
+                    break
+                f_bias *= min(np.sqrt(redchi), 3.0)
             print(f"\nFit results for {target} {scan_label}:")
             for name, p in out.params.items():
                 stderr = p.stderr if p.stderr is not None else float('nan')
                 print(f"  {name}: {p.value:.6g} +/- {stderr:.6g} (vary={p.vary})")
+            print(f"  → redchi2 = {redchi:.4f}, f_bias = {f_bias:.4f} (converged in {it+1} iteration(s))")
             
             # Collect parameters for implanted targets
             if target_type == 'implanted':
@@ -312,7 +323,7 @@ for target_idx, target in enumerate(targets):
             # Plot data and model
             try:
                 fig, ax = plt.subplots(figsize=(8,6))
-                ax.errorbar(x, y, yerr=y_err, fmt='o', label='Data', color='black', capsize=4)
+                ax.errorbar(x, y, yerr=y_err_fit, fmt='o', label='Data', color='black', capsize=4)
                 grid = np.linspace(np.min(x)*0.98, np.max(x)*1.02, 300)
                 y_mod = model(grid, out.params, target_type, backing_type) / q_e / 1e6 * eff
                 ax.set_title( f"{target} {scan_label}" )
