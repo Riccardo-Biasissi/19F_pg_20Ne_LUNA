@@ -97,7 +97,6 @@ def gaussian( x, x0, s ):
     return np.exp( -(x - x0)**2 / ( s*s*2 ) )
 
 _skg_cache = {}
-_arctan_norm_cache = {}
 
 def skewed_gaussian(x, x0, s, alpha):
     if s <= 0:
