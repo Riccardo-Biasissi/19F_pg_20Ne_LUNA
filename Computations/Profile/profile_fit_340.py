@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 plt.rcParams.update({'font.size': 14})
+import os
+import re
 
 from scipy import integrate
 from lmfit import Parameters, minimize
