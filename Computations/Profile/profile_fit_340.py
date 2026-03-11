@@ -120,7 +120,7 @@ def profile( de, theta, target_type ):
         w2 = theta["width1"] + theta["width2"]
         w3 = theta["width1"] + theta["width2"] + theta["width3"]
         s0 = 0.5 * (1 + erf( de          / (sq2 * edge)))  # rises at de=0
-        s1 = 0.5 * (1 + erf((de - w1)    / (sq2 * edge)))  # rises at de=width1
+        s1 = 0.5 * (1 + erf((de - w1)    / (sq2 * edge*100)))  # rises at de=width1
         s2 = 0.5 * (1 + erf((de - w2)    / (sq2 * edge)))  # rises at de=width1+width2
         s3 = 0.5 * (1 + erf((de - w3)    / (sq2 * edge)))  # rises at de=width1+width2+width3
         return (s0 - s1) + theta["norm1"] * (s1 - s2) + theta["norm2"] * (s2 - s3)
@@ -229,10 +229,10 @@ for target_idx, target in enumerate(targets):
         params.add( "n_backing",  value=3.0, vary=True, min=0.0, max=10.0 )
         params.add( "n_f",   value=1.0, vary=False )
         params.add( "width1", value=8.0, vary=True, min=1.0, max=80.0 )
-        params.add( "width2", value=10.0, vary=True, min=1.0, max=80.0 )
-        params.add( "width3", value=20.0, vary=True, min=1.0, max=80.0 )
-        params.add( "norm1", value=0.3, vary=True, min=0.0, max=1.0 )
-        params.add( "norm2", value=0.1, vary=True, min=0.0, max=1.0 )
+        params.add( "width2", value=0.0, vary=False, min=1.0, max=80.0 )
+        params.add( "width3", value=0.0, vary=False, min=1.0, max=80.0 )
+        params.add( "norm1", value=0.0, vary=False, min=0.0, max=1.0 )
+        params.add( "norm2", value=0.0, vary=False, min=0.0, max=1.0 )
     elif target_type == "evaporated":
         params = Parameters()
         params.add( "beam",  value=0.12, vary=False )
