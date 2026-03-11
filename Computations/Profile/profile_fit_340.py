@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 plt.rcParams.update({'font.size': 14})
+import os
+import re
 
 from scipy import integrate
 from lmfit import Parameters, minimize
@@ -27,10 +29,10 @@ targets = ['IMP_LFE#1', 'IMP_LFE#2', 'IMP_LFE#3', 'IMP_LTA#1', 'IMP_LTA#2', 'IMP
 backings = ['Fe', 'Fe', 'Fe', 'Ta', 'Ta', 'Fe', 'Ta']
 target_types = ['implanted'] * 7
 
-# Test tfor imp_lfe low 1 only
-targets = ['LiF']
-backings = ['Li']
-target_types = ['implanted']
+# Test for imp_lfe low 1 only
+targets = ['SUDF#4']
+backings = ['Ta']
+target_types = ['fluorinated']
 
 # Usefull constants
 k = 8.617e-5            # Boltzmann constant in eV/K

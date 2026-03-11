@@ -29,10 +29,10 @@ targets = ['IMP_LFE#1', 'IMP_LFE#2', 'IMP_LFE#3', 'IMP_LTA#1', 'IMP_LTA#2', 'IMP
 backings = ['Fe', 'Fe', 'Fe', 'Ta', 'Ta', 'Fe', 'Ta']
 target_types = ['implanted'] * 7
 
-# Test tfor imp_lfe low 1 only
-targets = ['LiF']
-backings = ['Li']
-target_types = ['implanted']
+# Test for imp_lfe low 1 only
+targets = ['SUDF#4']
+backings = ['Ta']
+target_types = ['fluorinated']
 
 # Usefull constants
 k = 8.617e-5            # Boltzmann constant in eV/K
