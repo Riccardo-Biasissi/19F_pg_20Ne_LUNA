@@ -110,15 +110,18 @@ def profile( de, theta, target_type ):
             return skewed_gaussian( de, theta["mean"], theta["std"], theta["alpha"] )
             # return gaussian( de, theta["mean"]+theta["dead_layer"], theta["std"] )
     elif target_type == 'fluorinated':
-        if de > 0 and de < theta["width1"]:
-            return 1 #- ( de / theta["width"] )*0.4
-        elif de > theta["width1"] and de < theta["width2"] + theta["width1"]:
-            return theta["norm1"]
-        elif de > theta["width2"] + theta["width1"] and de < theta["width2"] + theta["width1"] + theta["width3"]:
-            # return 0.09
-            return theta["norm2"] #2.5/de
-        else:
-            return 0
+        # Smooth step edges with erf so width parameters have non-zero gradients
+        # for the Levenberg-Marquardt Jacobian (hard steps give zero gradient -> widths stuck)
+        edge = 0.5  # keV smoothing scale at each boundary
+        sq2 = np.sqrt(2)
+        w1 = theta["width1"]
+        w2 = theta["width1"] + theta["width2"]
+        w3 = theta["width1"] + theta["width2"] + theta["width3"]
+        s0 = 0.5 * (1 + erf( de          / (sq2 * edge)))  # rises at de=0
+        s1 = 0.5 * (1 + erf((de - w1)    / (sq2 * edge)))  # rises at de=width1
+        s2 = 0.5 * (1 + erf((de - w2)    / (sq2 * edge)))  # rises at de=width1+width2
+        s3 = 0.5 * (1 + erf((de - w3)    / (sq2 * edge)))  # rises at de=width1+width2+width3
+        return (s0 - s1) + theta["norm1"] * (s1 - s2) + theta["norm2"] * (s2 - s3)
     elif target_type == 'evaporated':
         # Pure single step
         if de <= 0 or de >= theta["width"]:
@@ -219,9 +222,9 @@ for target_idx, target in enumerate(targets):
         params.add( "strag", value=1, vary=False, min=0.9, max=1.1  )
         params.add( "n_backing",  value=3.0, vary=True, min=0.0, max=10.0 )
         params.add( "n_f",   value=1.0, vary=False )
-        params.add( "width1", value=7.5, vary=False, min=8.0, max=80.0 )
-        params.add( "width2", value=10.0, vary=False )
-        params.add( "width3", value=20.0, vary=False )
+        params.add( "width1", value=8.0, vary=True, min=1.0, max=80.0 )
+        params.add( "width2", value=10.0, vary=True, min=1.0, max=80.0 )
+        params.add( "width3", value=20.0, vary=True, min=1.0, max=80.0 )
         params.add( "norm1", value=0.3, vary=True, min=0.0, max=1.0 )
         params.add( "norm2", value=0.1, vary=True, min=0.0, max=1.0 )
     elif target_type == "evaporated":
