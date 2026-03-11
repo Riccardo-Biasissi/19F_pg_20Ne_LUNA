@@ -29,10 +29,10 @@ targets = ['IMP_LFE#1', 'IMP_LFE#2', 'IMP_LFE#3', 'IMP_LTA#1', 'IMP_LTA#2', 'IMP
 backings = ['Fe', 'Fe', 'Fe', 'Ta', 'Ta', 'Fe', 'Ta']
 target_types = ['implanted'] * 7
 
-# Test tfor imp_lfe low 1 only
-targets = ['LiF']
-backings = ['Li']
-target_types = ['implanted']
+# Test for imp_lfe low 1 only
+targets = ['SUDF#4']
+backings = ['Ta']
+target_types = ['fluorinated']
 
 # Usefull constants
 k = 8.617e-5            # Boltzmann constant in eV/K
@@ -213,11 +213,11 @@ for target_idx, target in enumerate(targets):
         params.add( "strag",     value=1,    vary=False, min=0.9, max=1.1 )
         params.add( "n_backing", value=2.5,  vary=True,  min=0.0, max=7.0 )
         params.add( "n_f",       value=1.0,  vary=False )
-        params.add( "width1",    value=8.0,  vary=True,  min=1.0, max=80.0 )
-        params.add( "width2",    value=10.0, vary=True,  min=1.0, max=80.0 )
-        params.add( "width3",    value=20.0, vary=True,  min=1.0, max=80.0 )
-        params.add( "norm1",     value=0.3,  vary=True,  min=0.0, max=1.0 )
-        params.add( "norm2",     value=0.1,  vary=True,  min=0.0, max=1.0 )
+        params.add( "width1",    value=10.0,  vary=True,  min=1.0, max=80.0 )
+        params.add( "width2",    value=0.0, vary=False,  min=1.0, max=80.0 )
+        params.add( "width3",    value=0.0, vary=False,  min=1.0, max=80.0 )
+        params.add( "norm1",     value=0.0,  vary=False,  min=0.0, max=1.0 )
+        params.add( "norm2",     value=0.0,  vary=False,  min=0.0, max=1.0 )
 
     csv_path = f"Yield_scans/Results/Yield_{target}.csv"
 
