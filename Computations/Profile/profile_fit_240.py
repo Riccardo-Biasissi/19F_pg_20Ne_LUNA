@@ -110,12 +110,17 @@ def profile( de, theta, target_type ):
         else:
             return skewed_gaussian( de, theta["mean"], theta["std"], theta["alpha"] )
     elif target_type == 'fluorinated':
-        # Smooth step edges with erf so width has non-zero gradient for the optimizer
+        # 3-layer erf-smoothed profile (mirrors profile_fit_340.py)
         edge = 0.5  # keV smoothing scale at each boundary
         sq2 = np.sqrt(2)
-        s0 = 0.5 * (1 + erf( de                    / (sq2 * edge)))  # rises at de=0
-        s1 = 0.5 * (1 + erf((de - theta["width"])  / (sq2 * edge)))  # falls at de=width
-        return s0 - s1
+        w1 = theta["width1"]
+        w2 = theta["width1"] + theta["width2"]
+        w3 = theta["width1"] + theta["width2"] + theta["width3"]
+        s0 = 0.5 * (1 + erf( de          / (sq2 * edge)))  # rises at de=0
+        s1 = 0.5 * (1 + erf((de - w1)    / (sq2 * edge)))  # falls at de=width1
+        s2 = 0.5 * (1 + erf((de - w2)    / (sq2 * edge)))  # falls at de=width1+width2
+        s3 = 0.5 * (1 + erf((de - w3)    / (sq2 * edge)))  # falls at de=total width
+        return (s0 - s1) + theta["norm1"] * (s1 - s2) + theta["norm2"] * (s2 - s3)
     elif target_type == 'implanted' and 'Low' in target:
         # Gaussian
         if de <= 0:
@@ -202,13 +207,17 @@ for target_idx, target in enumerate(targets):
         params.add( "mean",  value=2.0, vary=True, min=0.0, max=10.0 )
         params.add( "std",   value=7.0, vary=True, min=0.0, max=15.0  )
         params.add( "alpha", value=5.0, vary=False, min=0.0, max=7.5 )
-    else:
+    elif target_type == "fluorinated":
         params = Parameters()
-        params.add( "beam",  value=0.12, vary=False )
-        params.add( "strag", value=1, vary=False, min=0.9, max=1.1  )
-        params.add( "n_backing",  value=2.5, vary=True, min=0.0, max=7.0 )
-        params.add( "n_f",   value=1.0, vary=False )
-        params.add( "width", value=15.0, vary=True, min=0.0, max=100.0 )
+        params.add( "beam",      value=0.12, vary=False )
+        params.add( "strag",     value=1,    vary=False, min=0.9, max=1.1 )
+        params.add( "n_backing", value=2.5,  vary=True,  min=0.0, max=7.0 )
+        params.add( "n_f",       value=1.0,  vary=False )
+        params.add( "width1",    value=8.0,  vary=True,  min=1.0, max=80.0 )
+        params.add( "width2",    value=10.0, vary=True,  min=1.0, max=80.0 )
+        params.add( "width3",    value=20.0, vary=True,  min=1.0, max=80.0 )
+        params.add( "norm1",     value=0.3,  vary=True,  min=0.0, max=1.0 )
+        params.add( "norm2",     value=0.1,  vary=True,  min=0.0, max=1.0 )
 
     csv_path = f"Yield_scans/Results/Yield_{target}.csv"
 
