@@ -323,7 +323,6 @@ for target_idx, target in enumerate(targets):
 
             # --- Optional MCMC posterior sampling for corner plots + asymmetric errors ---
             if RUN_MCMC:
-                global _silent
                 _silent = True
                 free_params = [n for n, p in out.params.items() if p.vary]
                 nwalkers = max(MCMC_NWALKERS, 2 * len(free_params) + 2)
