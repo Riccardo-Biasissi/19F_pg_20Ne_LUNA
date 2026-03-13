@@ -33,16 +33,16 @@ backings = ['Fe', 'Fe', 'Fe', 'Ta', 'Ta', 'Fe', 'Ta']
 target_types = ['implanted'] * 7
 
 # Test for imp_lfe low 1 only
-targets = ['SUDF#4']
+targets = ['IMP_LTA#2']
 backings = ['Ta']
-target_types = ['fluorinated']
+target_types = ['implanted']
 
 # MCMC settings — set RUN_MCMC=True to run posterior sampling after the LM fit
 # (slower, but gives corner plots and asymmetric credible intervals)
 RUN_MCMC      = False  # toggle
-MCMC_NWALKERS = 16     # must be >= 2 * n_free_params
+MCMC_NWALKERS = 12     # must be >= 2 * n_free_params
 MCMC_BURN     = 100    # burn-in steps to discard
-MCMC_STEPS    = 300    # production steps
+MCMC_STEPS    = 1000    # production steps
 MCMC_THIN     = 5      # keep every N-th sample
 ENERGY_TAG    = "340"  # used in output filenames
 
@@ -230,7 +230,7 @@ for target_idx, target in enumerate(targets):
     if target_type == "implanted":
         params = Parameters()
         params.add( "beam",  value=0.12, vary=False )
-        params.add( "strag", value=1, vary=False, min=0.9, max=1.1  )
+        params.add( "strag", value=1, vary=False  )
         params.add( "n_backing",  value=1.0, vary=True, min=0.0, max=7.0 )
         params.add( "n_f",   value=1.0, vary=False )
         params.add( "mean",  value=2.0, vary=True, min=0.0, max=10.0 )
@@ -343,7 +343,7 @@ for target_idx, target in enumerate(targets):
                     fig_c = corner.corner(flat, labels=free_params,
                                           quantiles=[0.16, 0.5, 0.84],
                                           show_titles=True, title_fmt='.3g',
-                                          truths=truths)
+                                          truth_color='royalblue', truths=truths)
                     cname = "".join(c if (c.isalnum() or c in ('_','-')) else '_'
                                     for c in f"{target}_{scan_label}_{ENERGY_TAG}_corner")
                     fig_c.savefig(os.path.join(results_dir, f"{cname}.png"),

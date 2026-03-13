@@ -33,16 +33,16 @@ backings = ['Fe', 'Fe', 'Fe', 'Ta', 'Ta', 'Fe', 'Ta']
 target_types = ['implanted'] * 7
 
 # Test for imp_lfe low 1 only
-targets = ['IMP_LTA#2']
-backings = ['Ta']
-target_types = ['implanted']
+targets = ['IMP_LFE#1', 'IMP_LFE#2', 'IMP_LFE#3']
+backings = ['Fe', 'Fe', 'Fe']
+target_types = ['implanted', 'implanted', 'implanted']
 
 # MCMC settings — set RUN_MCMC=True to run posterior sampling after the LM fit
 # (slower, but gives corner plots and asymmetric credible intervals)
 RUN_MCMC      = True  # toggle
-MCMC_NWALKERS = 16     # must be >= 2 * n_free_params
+MCMC_NWALKERS = 10     # must be >= 2 * n_free_params
 MCMC_BURN     = 100    # burn-in steps to discard
-MCMC_STEPS    = 300    # production steps
+MCMC_STEPS    = 1000    # production steps
 MCMC_THIN     = 5      # keep every N-th sample
 ENERGY_TAG    = "240"  # used in output filenames
 
@@ -87,7 +87,8 @@ def effective_stopping_Li( energy, n_inactive=1, n_active=1 ):
     return H_in_F.eval( energy ) + stoichiometry * H_in_Li.eval( energy )
 
 # Starggling
-popt = [0.75324712]
+popt = [0.75324712] # Old value
+# popt = [0.8]
 def straggling( x ):
     return popt[0] * np.sqrt( x )
 
@@ -182,7 +183,7 @@ def integrand( x, theta, x0, target_type, backing ):
 def straggled_profile( x, theta, target_type, backing ):
     y = np.zeros( shape=len( x ) )
     for idx in range( len( x ) ):
-        nsteps = 300
+        nsteps = 100
         xmin, xmax = x[idx] - 100, x[idx]
         dx = np.abs( xmax - xmin ) / nsteps
         y[idx] = integrate.simpson( [ integrand( x_i, theta, x[idx], target_type, backing ) for x_i in np.linspace( xmin, xmax, nsteps) ], dx=dx )
@@ -220,7 +221,7 @@ for target_idx, target in enumerate(targets):
     if target_type == "implanted":
         params = Parameters()
         params.add( "beam",  value=0.12, vary=False )
-        params.add( "strag", value=1, vary=False, min=0.9, max=1.1  )
+        params.add( "strag", value=1, vary=False  )
         params.add( "n_backing",  value=1.0, vary=True, min=0.0, max=7.0 )
         params.add( "n_f",   value=1.0, vary=False )
         params.add( "mean",  value=2.0, vary=True, min=0.0, max=10.0 )
@@ -233,17 +234,11 @@ for target_idx, target in enumerate(targets):
         params.add( "n_backing", value=2.5,  vary=True,  min=0.0,  max=7.0   )
         params.add( "n_f",       value=1.0,  vary=False )
         # --- 3-layer erf params (commented out) ---
-        # params.add( "width1",    value=8.0,  vary=True,  min=1.0, max=80.0 )
-        # params.add( "width2",    value=10.0, vary=True,  min=1.0, max=80.0 )
-        # params.add( "width3",    value=20.0, vary=True,  min=1.0, max=80.0 )
-        # params.add( "norm1",     value=0.3,  vary=True,  min=0.0, max=1.0  )
-        # params.add( "norm2",     value=0.1,  vary=True,  min=0.0, max=1.0  )
-        # Arctan profile params
-        params.add( "k0",        value=3,       vary=False,  min=0.0,  max=10.0  )
-        params.add( "k1",        value=5,       vary=False,  min=0.0,  max=10.0  )
-        params.add( "s0",        value=5.0,     vary=False,  min=0.01, max=100.0 )
-        params.add( "s1",        value=0.2,     vary=True,  min=0.01, max=1.0 )
-        params.add( "deltaE",    value=10.0,    vary=True,  min=1.0,  max=120.0 )
+        params.add( "width1",    value=8.0,  vary=True,  min=1.0, max=80.0 )
+        params.add( "width2",    value=10.0, vary=True,  min=1.0, max=80.0 )
+        params.add( "width3",    value=20.0, vary=True,  min=1.0, max=80.0 )
+        params.add( "norm1",     value=0.3,  vary=True,  min=0.0, max=1.0  )
+        params.add( "norm2",     value=0.1,  vary=True,  min=0.0, max=1.0  )
 
     csv_path = f"Yield_scans/Results/Yield_{target}.csv"
 
@@ -324,6 +319,16 @@ for target_idx, target in enumerate(targets):
                     )
                     _silent = False
                     flat = out_mcmc.flatchain[free_params].to_numpy()
+
+                    # --- Saving the MCMC parameters on CSV file ---
+                    mcmc_df = pd.DataFrame(flat, columns=free_params)
+                    mcmc_name = "".join(c if (c.isalnum() or c in ('_', '-')) else '_'
+                                        for c in f"{target}_{scan_label}_{ENERGY_TAG}_mcmc_samples")
+                    mcmc_path = os.path.join(results_dir, f"{mcmc_name}.csv")
+                    mcmc_df.to_csv(mcmc_path, index=False)
+                    print(f"MCMC samples saved: {mcmc_path}")
+
+                    # --- Recover the intervals and make corner plot ---
                     print(f"\nMCMC credible intervals ({target} {scan_label}):")
                     for i, name in enumerate(free_params):
                         q16, q50, q84 = np.percentile(flat[:, i], [16, 50, 84])
@@ -332,7 +337,7 @@ for target_idx, target in enumerate(targets):
                     fig_c = corner.corner(flat, labels=free_params,
                                           quantiles=[0.16, 0.5, 0.84],
                                           show_titles=True, title_fmt='.3g',
-                                          truths=truths)
+                                          truth_color='royalblue', truths=truths)
                     cname = "".join(c if (c.isalnum() or c in ('_','-')) else '_'
                                     for c in f"{target}_{scan_label}_{ENERGY_TAG}_corner")
                     fig_c.savefig(os.path.join(results_dir, f"{cname}.png"),
