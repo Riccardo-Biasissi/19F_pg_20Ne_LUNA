@@ -1,0 +1,2 @@
+n_backing	n_backing_min	n_backing_max	mean	mean_min	mean_max	std	std_min	std_max
+2.29803	2.27173	2.32434	6.24692	6.20456	6.28927	4.54937	4.47982	4.61893

@@ -58,7 +58,7 @@ N_WORKERS = 16                # None → usa tutti i core disponibili
 # =============================================================================
 #  IMPOSTAZIONI MCMC
 # =============================================================================
-RUN_MCMC      = False
+RUN_MCMC      = True
 MCMC_NWALKERS = 16
 MCMC_BURN     = 100
 MCMC_STEPS    = 1000
@@ -143,14 +143,10 @@ def profile(de, theta, target_type):
     elif target_type == 'implanted' and target == 'LiF':
         edge = 0.05
         sq2  = np.sqrt(2)
-        w1   = theta["width1"]
-        w2   = theta["width1"] + theta["width2"]
-        w3   = theta["width1"] + theta["width2"] + theta["width3"]
+        w    = theta["width"]
         s0 = 0.5 * (1 + erf(de          / (sq2 * edge)))
-        s1 = 0.5 * (1 + erf((de - w1)   / (sq2 * edge)))
-        s2 = 0.5 * (1 + erf((de - w2)   / (sq2 * edge)))
-        s3 = 0.5 * (1 + erf((de - w3)   / (sq2 * edge)))
-        return (s0 - s1) + theta["norm1"] * (s1 - s2) + theta["norm2"] * (s2 - s3)
+        s1 = 0.5 * (1 + erf((de - w)   / (sq2 * edge)))
+        return (s0 - s1)
     elif target_type == 'fluorinated':
         edge = 0.05
         sq2  = np.sqrt(2)
@@ -174,9 +170,9 @@ def reaction_yield(x0, theta, de, target_type, backing):
     cross = cross_section(x0, theta, de) * 1e-24
     nb    = theta["n_backing"]
     nf    = theta["n_f"]
-    if backing == 'Ta':
+    if backing == 'Ta' and target != 'LiF':
         stop = effective_stopping_Ta(x0, nb, nf) * 1e-15 * 1e-3
-    elif backing == 'Li':
+    elif backing == 'Ta' and target == 'LiF':
         stop = effective_stopping_Li(x0, nb, nf) * 1e-15 * 1e-3
     else:  # Fe (default)
         stop = effective_stopping_Fe(x0, nb, nf) * 1e-15 * 1e-3
@@ -312,11 +308,7 @@ def process_scan(job):
         params.add("strag",     value=1,    vary=False, min=0.9,  max=1.1)
         params.add("n_backing", value=2.5,  vary=True,  min=0.0,  max=7.0)
         params.add("n_f",       value=1.0,  vary=False)
-        params.add("width1",    value=8.0,  vary=True,  min=1.0, max=80.0)
-        params.add("width2",    value=0.0, vary=False)
-        params.add("width3",    value=0.0, vary=False)
-        params.add("norm1",     value=0.0,  vary=False)
-        params.add("norm2",     value=0.0,  vary=False)
+        params.add("width",    value=8.0,  vary=True,  min=1.0, max=80.0)
     else:
         params = Parameters()
         params.add("beam",      value=0.12, vary=False)
@@ -337,8 +329,10 @@ def process_scan(job):
         nz  = y_err[y_err > 0]
         rep = np.median(nz) if nz.size else 1.0
         y_err_orig[y_err_orig == 0] = rep
-
-    bias_mask = (x > 240)
+ 
+    bias_mask = (x > 240*19/20.007) # Bias calcolato sui punti della coda
+                                    # e converto 240keV (lab) in (cm) perché i punti
+                                    # sperimentali sono convertiti appena vengono letti
 
     try:
         f_bias   = 0.35
@@ -483,8 +477,8 @@ def process_scan(job):
 # =============================================================================
 if __name__ == "__main__":
     # ── lista target ─────────────────────────────────────────────────────────
-    targets      = ['LiF']
-    backings     = ['Ta']
+    targets      = ['IMP_LFE-Low#1']
+    backings     = ['Fe']
     target_types = ['implanted']
 
     results_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
@@ -518,10 +512,6 @@ if __name__ == "__main__":
             x     = x[mask]
             y     = y[mask]
             y_err = y_err[mask]
-
-            print(x)
-            print(y)
-            print(y_err)
 
             # Converti in CM frame
             x = x * 19 / 20.007
